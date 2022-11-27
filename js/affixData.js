@@ -2340,7 +2340,8 @@ let data = {
             5,
             10,
             15,
-            20
+            20,
+            30
         ]
     },
     "excludePattern": {
