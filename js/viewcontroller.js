@@ -68,7 +68,6 @@ class ViewController {
         }
         // Mutable variables
         this.langCode = this.languages[0];
-        this.filters = lang.filters[this.langCode];
         this.shouldUpslot = true;
         this.shouldSpread = true;
         this.shouldUseTrainer = false;
@@ -336,13 +335,6 @@ class ViewController {
 
     }
 
-    setFilters(filters) {
-        if (filters && Array.isArray(filters)) {
-            this.filters = filters.slice();
-        }
-        return this;
-    }
-
     setAffixSelectionView(bool, shouldAnimate) {
         if (typeof bool !== 'boolean') return;
         this.closeAll({});
@@ -352,7 +344,7 @@ class ViewController {
                 $('body').append(
                     AFFIX_SELECTION_VIEW_TEMPLATE({
                         affixesSelected: this.affixesSelected,
-                        categories: this.filters,
+                        categories: lang.filters[this.langCode],
                         abilityList: Assistant.data.abilityList, // List of all transferable affixes
                         langCode: this.langCode
                     }));
@@ -1770,7 +1762,6 @@ class ViewController {
         let idx = this.languages.indexOf(this.langCode);
         if (idx >= 0) {
             this.langCode = this.languages[(idx + 1) % this.languages.length];
-            this.filters = lang.filters[this.langCode];
             this.updateURLParams();
             this.updateView();
             this.updateMenuBarDescriptions();
