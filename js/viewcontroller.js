@@ -83,7 +83,7 @@ class ViewController {
 
     setup() {
         $("#malulleybovo").text(lang.app.malulleybovo[this.langCode]);
-        $("#ver").text("v1.3.0");
+        $("#ver").text("v1.3.0-alt");
         $("#editor").children().first().panzoom({
             which: 1,
             minScale: 0.1,
