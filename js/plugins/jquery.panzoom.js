@@ -1,13 +1,13 @@
 /**
  * @license jquery.panzoom.js v3.2.2
- * Updated: Sat Aug 27 2016
+ * Updated: Wed Jun 28 2017
  * Add pan and zoom functionality to any element
  * Copyright (c) timmy willison
  * Released under the MIT license
  * https://github.com/timmywil/jquery.panzoom/blob/master/MIT-License.txt
  */
 
-(function(global, factory) {
+ (function(global, factory) {
 	// AMD
 	if (typeof define === 'function' && define.amd) {
 		define([ 'jquery' ], function(jQuery) {
@@ -297,12 +297,15 @@
 		which: 1,
 
 		// The increment at which to zoom
-		// adds/subtracts to the scale each time zoomIn/Out is called
+		// Should be a number greater than 0
 		increment: 0.3,
 
-		// Turns on exponential zooming
-		// If false, zooming will be incremented linearly
-		exponential: true,
+		// When no scale is passed, this option tells
+		// the `zoom` method to increment
+		// the scale *linearly* based on the increment option.
+		// This often ends up looking like very little happened at larger zoom levels.
+		// The default is to multiply/divide the scale based on the increment.
+		linearZoom: false,
 
 		// Pan only when the scale is greater than minScale
 		panOnlyWhenZoomed: false,
@@ -510,6 +513,15 @@
 		},
 
 		/**
+		 * Get the current scale.
+		 * @param {String} [transform] matrix-formatted transform value
+		 * @returns {Number} Current scale relative to the initial scale (height / width = 1)
+		 */
+		getScale: function(matrix) {
+			return Math.sqrt(Math.pow(matrix[0], 2) + Math.pow(matrix[1], 2));
+		},
+
+		/**
 		 * Given a matrix object, quickly set the current matrix of the element
 		 * @param {Array|String} matrix
 		 * @param {Object} [options]
@@ -526,7 +538,7 @@
 			if (typeof matrix === 'string') {
 				matrix = this.getMatrix(matrix);
 			}
-			var scale = +matrix[0];
+			var scale = this.getScale(matrix);
 			var contain = typeof options.contain !== 'undefined' ? options.contain : this.options.contain;
 
 			// Apply containment
@@ -690,31 +702,29 @@
 			if (options.disableZoom) { return; }
 			var animate = false;
 			var matrix = options.matrix || this.getMatrix();
-			var startScale = +matrix[0];
+			var surfaceM = new Matrix(matrix);
+			var startScale = this.getScale(matrix);
 
 			// Calculate zoom based on increment
 			if (typeof scale !== 'number') {
-				// Just use a number a little greater than 1
-				// Below 1 can use normal increments
-				if (options.exponential && startScale - options.increment >= 1) {
-					scale = Math[scale ? 'sqrt' : 'pow'](startScale, 2);
+				if (options.linearZoom) {
+					scale = 1 + (options.increment * (scale ? -1 : 1)) / startScale;
 				} else {
-					scale = startScale + (options.increment * (scale ? -1 : 1));
+					scale = scale ? (1 / (1 + options.increment)) : (1 + options.increment);
 				}
 				animate = true;
+			} else {
+				scale = 1 / startScale;
 			}
 
 			// Constrain scale
-			if (scale > options.maxScale) {
-				scale = options.maxScale;
-			} else if (scale < options.minScale) {
-				scale = options.minScale;
-			}
+			scale = Math.max(Math.min(scale, options.maxScale / startScale), options.minScale / startScale);
+			var m = surfaceM.x(new Matrix(scale, 0, 0, 0, (typeof options.dValue === 'number' ? options.dValue / startScale : scale), 0));
 
 			// Calculate focal point based on scale
 			var focal = options.focal;
 			if (focal && !options.disablePan) {
-				// Adapted from code by Florian Günther
+				// Adapted from code by Florian GÃ¼nther
 				// https://github.com/florianguenther/zui53
 				this.resetDimensions();
 				var dims = options.dims = this.dimensions;
@@ -729,21 +739,21 @@
 				}
 
 				var clientV = new Vector(clientX, clientY, 1);
-				var surfaceM = new Matrix(matrix);
 				// Supply an offset manually if necessary
 				var o = this.parentOffset || this.$parent.offset();
 				var offsetM = new Matrix(1, 0, o.left - this.$doc.scrollLeft(), 0, 1, o.top - this.$doc.scrollTop());
 				var surfaceV = surfaceM.inverse().x(offsetM.inverse().x(clientV));
-				var scaleBy = scale / matrix[0];
-				surfaceM = surfaceM.x(new Matrix([scaleBy, 0, 0, scaleBy, 0, 0]));
+				surfaceM = surfaceM.x(new Matrix([scale, 0, 0, scale, 0, 0]));
 				clientV = offsetM.x(surfaceM.x(surfaceV));
 				matrix[4] = +matrix[4] + (clientX - clientV.e(0));
 				matrix[5] = +matrix[5] + (clientY - clientV.e(1));
 			}
 
 			// Set the scale
-			matrix[0] = scale;
-			matrix[3] = typeof options.dValue === 'number' ? options.dValue : scale;
+			matrix[0] = m.e(0);
+			matrix[1] = m.e(3);
+			matrix[2] = m.e(1);
+			matrix[3] = m.e(4);
 
 			// Calling zoom may still pan the element
 			this.setMatrix(matrix, {
@@ -754,7 +764,7 @@
 
 			// Trigger zoom event
 			if (!options.silent) {
-				this._trigger('zoom', matrix[0], options);
+				this._trigger('zoom', scale, options);
 			}
 		},
 
@@ -960,7 +970,7 @@
 			if (!options.disablePan || !options.disableZoom) {
 				events[ str_start ] = function(e) {
 					var touches;
-					if (e.type === 'touchstart' ?
+					if (/touchstart|pointerdown/.test(e.type) ?  // fix double events pointer/touch on Chrome >=55 #303
 						// Touch
 						(touches = e.touches || e.originalEvent.touches) &&
 							((touches.length === 1 && !options.disablePan) || touches.length === 2) :
@@ -1128,6 +1138,12 @@
 			if (this.panning) {
 				return;
 			}
+
+      var type = event.type;
+			if (window.PointerEvent && (type === 'touchstart')) {  // fix double events pointer/touch on Chrome >=55 #303        
+//        return false;  
+      }
+
 			var moveEvent, endEvent,
 				startDistance, startScale, startMiddle,
 				startPageX, startPageY, touch;
@@ -1139,7 +1155,6 @@
 			var origPageX = +original[4];
 			var origPageY = +original[5];
 			var panOptions = { matrix: matrix, animate: 'skip' };
-			var type = event.type;
 
 			// Use proper events
 			if (type === 'pointerdown') {
@@ -1163,9 +1178,6 @@
 			// Remove any transitions happening
 			this.transition(true);
 
-			// Indicate that we are currently panning
-			this.panning = true;
-
 			// Trigger start event
 			this._trigger('start', event, touches);
 
@@ -1176,7 +1188,7 @@
 							return;
 						}
 						startDistance = self._getDistance(touches);
-						startScale = +matrix[0];
+						startScale = self.getScale(matrix);
 						startMiddle = self._getMiddle(touches);
 						return;
 					}
@@ -1199,7 +1211,7 @@
 
 			var move = function(e) {
 				var coords;
-				e.preventDefault();
+				e.stopPropagation();  // chrome passive event warning https://www.chromestatus.com/features/5093566007214080  #328
 				touches = e.touches || e.originalEvent.touches;
 				setStart(e, touches);
 
@@ -1210,7 +1222,6 @@
 						var middle = self._getMiddle(touches);
 						var diff = self._getDistance(touches) - startDistance;
 
-						// Set zoom
 						self.zoom(diff * (options.increment / 100) + startScale, {
 							focal: middle,
 							matrix: matrix,
@@ -1232,6 +1243,9 @@
 				if (!coords) {
 					coords = e;
 				}
+
+        // Indicate that we are currently panning
+        this.panning = true;
 
 				self.pan(
 					origPageX + coords.pageX - startPageX,
