@@ -822,17 +822,19 @@ class ViewController {
     getShortURLThenOpenLinkView() {
         if (this.requestSafetyFlag) return;
         this.requestSafetyFlag = true;
-        let bitlyUrl = 'https://api-ssl.bitly.com/v3/shorten?'
-            + 'access_token=85f88da122ee5904f211eea3714d900570b7cb1f&longUrl='
-            + encodeURIComponent(window.location.href)
         let vc = this;
         $.ajax({
-            type: "GET",
-            url: bitlyUrl,
+            type: 'POST',
+            headers: {
+                'Authorization': 'Bearer 85f88da122ee5904f211eea3714d900570b7cb1f',
+                'Content-Type': 'application/json'
+            },
+            url: 'https://api-ssl.bitly.com/v4/shorten',
+            dataType: 'json',
+            data: JSON.stringify({ long_url: encodeURI(window.location.href) }),
             success: function (res) {
                 vc.requestSafetyFlag = false;
-                let shortlink = (res.data && res.data.url) ?
-                    res.data.url : null;
+                let shortlink = res ? res.link : null;
                 vc.openGetLinkView({
                     shouldAnimate: true,
                     shortLink: shortlink
