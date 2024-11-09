@@ -730,45 +730,11 @@ class ViewController {
             });
         }
         else $('div.link-container').removeClass('hidden');
-        // Copy Long Link Button Handler
-        $('div.link-container div.copy-button:nth-child(3)').click(() => {
-            let copyText = $('div.link-container input[type=text]:nth-child(2)')[0];
+        $('div.link-container div.copy-button').click((e) => {
+            let copyText = $(e.target.parentElement).prev('input[type=text]')[0];
             if (!copyText) return;
             copyText.select();
             document.execCommand("copy");
-            try {
-                gaRequests.send('share', 'buttonClick', {
-                    'View Type': 'Share Link View',
-                    'Link Type': 'Link to Assistant',
-                    'Number Of Links Used': 1
-                });
-            }
-            catch (e) { }
-        });
-        // Copy Short Link Button Handler
-        $('div.link-container div.copy-button:nth-child(5)').click(() => {
-            let copyText = $('div.link-container input[type=text]:nth-child(4)')[0];
-            if (!copyText) return;
-            copyText.select();
-            document.execCommand("copy");
-            try {
-                gaRequests.send('share', 'buttonClick', {
-                    'View Type': 'Share Link View',
-                    'Link Type': 'Link to Assistant',
-                    'Number Of Links Used': 1
-                });
-            }
-            catch (e) { }
-        });
-        $('div.link-container div.copy-button:nth-child(6)').find('a').click(() => {
-            try {
-                gaRequests.send('share', 'buttonClick', {
-                    'View Type': 'Share Link View',
-                    'Link Type': 'Link to Simulator',
-                    'Number Of Links Used': 1
-                });
-            }
-            catch (e) { }
         });
         $('div.link-container div.confirm-button').click(() => {
             $('div.link-container').remove();
