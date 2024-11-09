@@ -702,7 +702,7 @@ class ViewController {
         });
     }
 
-    openGetLinkView({ shouldAnimate, e, shortLink }) {
+    openGetLinkView({ shouldAnimate, e, shortLink, shortLinkAlt }) {
         let vc = (this instanceof ViewController) ? this :
             (e.data && e.data.viewcontroller) ? e.data.viewcontroller : undefined;
         if (!(vc instanceof ViewController)) return;
@@ -712,7 +712,8 @@ class ViewController {
 				link: decodeURI(window.location.href),
                 linkToSim: vc.assistant.toURL(this.URL_VER, true),
 				smallLink: shortLink,
-				langCode: vc.langCode
+                smallLinkAlt: shortLinkAlt,
+                langCode: vc.langCode
 		}));
         if (shouldAnimate) {
             $('div.link-container').animate({}, 10, function () {
@@ -823,31 +824,49 @@ class ViewController {
         if (this.requestSafetyFlag) return;
         this.requestSafetyFlag = true;
         let vc = this;
-        $.ajax({
-            type: 'POST',
-            headers: {
-                'Authorization': 'Bearer 85f88da122ee5904f211eea3714d900570b7cb1f',
-                'Content-Type': 'application/json'
-            },
-            url: 'https://api-ssl.bitly.com/v4/shorten',
-            dataType: 'json',
-            data: JSON.stringify({ long_url: encodeURI(window.location.href) }),
-            success: function (res) {
-                vc.requestSafetyFlag = false;
-                let shortlink = res ? res.link : null;
-                vc.openGetLinkView({
-                    shouldAnimate: true,
-                    shortLink: shortlink
-                });
-            },
-            error: function (XMLHttpRequest, textStatus, errorThrown) {
-                vc.requestSafetyFlag = false;
-                vc.openGetLinkView({
-                    shouldAnimate: true,
-                    shortLink: null
-                });
-            }
-        });
+        let links = {
+            short: null,
+            alt: null
+        };
+        $.when(
+            $.ajax({
+                type: 'POST',
+                headers: {
+                    'Authorization': 'Bearer 85f88da122ee5904f211eea3714d900570b7cb1fx',
+                    'Content-Type': 'application/json'
+                },
+                url: 'https://api-ssl.bitly.com/v4/shorten',
+                dataType: 'json',
+                data: JSON.stringify({ long_url: encodeURI(window.location.href) }),
+                success: function (res) {
+                    links.short = res ? res.link : null;
+                }
+            }),
+            $.ajax({
+                type: 'POST',
+                url: 'https://l.withsam.org/create',
+                dataType: 'json',
+                data: JSON.stringify({ url: encodeURI(window.location.href) }),
+                success: function (res) {
+                    if (res) {
+                        // assumes client side redirection code exists at the root of the origin
+                        let url = new URL(window.location.origin);
+                        url.hash = res.path;
+                        links.alt = url.href;
+                    }
+                }
+            })
+        )
+        .then(linkViewCallback, linkViewCallback);
+
+        function linkViewCallback() {
+            vc.requestSafetyFlag = false;
+            vc.openGetLinkView({
+                shouldAnimate: true,
+                shortLink: links.short,
+                shortLinkAlt: links.alt
+            });
+        }
     }
 
     updateFromURL() {

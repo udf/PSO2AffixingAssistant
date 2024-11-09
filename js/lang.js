@@ -6806,6 +6806,11 @@ const lang = Object.freeze({
             "jp": "クリップボードにコピー(ショート)",
             "glen": "Copy to Clipboard (Short)"
         },
+        "shareFormulaButtonShortAlt": {
+            "en": "Copy to Clipboard (Short Alt)",
+            "jp": "クリップボードにコピー(ショート代替)",
+            "glen": "Copy to Clipboard (Short Alt)"
+        },
         "openInSimButton": {
             "en": "Open in Affix Simulator",
             "jp": "合成シミュレータで開く",
