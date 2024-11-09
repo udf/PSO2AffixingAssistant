@@ -832,7 +832,7 @@ class ViewController {
             $.ajax({
                 type: 'POST',
                 headers: {
-                    'Authorization': 'Bearer 85f88da122ee5904f211eea3714d900570b7cb1fx',
+                    'Authorization': 'Bearer 85f88da122ee5904f211eea3714d900570b7cb1f',
                     'Content-Type': 'application/json'
                 },
                 url: 'https://api-ssl.bitly.com/v4/shorten',
